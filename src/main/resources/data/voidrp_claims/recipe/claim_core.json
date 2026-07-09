@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "O": "minecraft:obsidian",
+    "E": "minecraft:ender_pearl",
+    "N": "minecraft:netherite_ingot"
+  },
+  "pattern": [
+    "OEO",
+    "ENE",
+    "OEO"
+  ],
+  "result": { "id": "voidrp_claims:claim_core", "count": 1 }
+}
