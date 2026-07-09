@@ -31,7 +31,7 @@ public final class ClaimsConfig {
         String backend = prop("voidrp.claims.backend", prop("voidrp.auth.backend", "https://api.void-rp.ru"));
         String secret = prop("voidrp.claims.gameSecret", prop("voidrp.auth.gameSecret", ""));
         String slug = prop("voidrp.claims.serverSlug", "");
-        int maxLevel = intProp("voidrp.claims.maxLevel", 10);
+        int maxLevel = intProp("voidrp.claims.maxLevel", 31);
         String upgradeItem = prop("voidrp.claims.upgradeItem", "minecraft:diamond_block");
         int perLevel = intProp("voidrp.claims.upgradeItemsPerLevel", 1);
         return new ClaimsConfig(URI.create(backend), secret, slug, maxLevel, upgradeItem, perLevel);

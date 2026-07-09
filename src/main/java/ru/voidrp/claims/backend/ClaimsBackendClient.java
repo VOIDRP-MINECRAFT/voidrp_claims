@@ -42,8 +42,10 @@ public final class ClaimsBackendClient {
         return sendAsync(jsonPost("/api/v1/claims/create", req), ClaimActionResponse.class);
     }
 
-    public CompletableFuture<ClaimActionResponse> upgradeAsync(String claimId, int newLevel) {
-        return sendAsync(jsonPost("/api/v1/claims/" + claimId + "/upgrade", new ClaimUpgradeRequest(newLevel)),
+    public CompletableFuture<ClaimActionResponse> addCubeAsync(String claimId, int cx, int cy, int cz) {
+        return sendAsync(
+                jsonPost("/api/v1/claims/" + claimId + "/upgrade",
+                        new ClaimUpgradeRequest(java.util.List.of(cx, cy, cz))),
                 ClaimActionResponse.class);
     }
 

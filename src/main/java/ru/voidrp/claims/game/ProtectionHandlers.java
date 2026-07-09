@@ -30,7 +30,7 @@ public final class ProtectionHandlers {
         }
         BlockPos pos = event.getPos();
         String dim = Claims.dimKey(level);
-        ClaimData claim = VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getZ());
+        ClaimData claim = VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getY(), pos.getZ());
         if (claim == null) {
             return; // anarchy outside claims
         }
@@ -63,7 +63,7 @@ public final class ProtectionHandlers {
         }
         BlockPos pos = event.getPos();
         String dim = Claims.dimKey(level);
-        ClaimData claim = VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getZ());
+        ClaimData claim = VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getY(), pos.getZ());
         boolean isCore = event.getPlacedBlock().is(ModContent.CLAIM_CORE.get());
 
         Entity entity = event.getEntity();
@@ -93,20 +93,26 @@ public final class ProtectionHandlers {
         String dim = Claims.dimKey(level);
 
         ClaimData core = VoidRpClaims.store().coreAt(dim, pos.getX(), pos.getY(), pos.getZ());
-        if (core != null && (core.ownerNick().equals(Claims.nickLower(player)) || Claims.isAdmin(player))) {
-            if (Claims.heldItemId(player).equals(VoidRpClaims.config().upgradeItemId())) {
-                Claims.upgradeClaim(level, core, player);
-            } else {
-                int span = 2 * (core.level() - 1) + 1;
-                Claims.msg(player, "§dПриват §f" + core.ownerNick() + "§d · ур. " + core.level()
-                        + " (" + span + "×" + span + " чанков) · доверенных: " + core.trusted().size());
+        if (core != null) {
+            String nick = Claims.nickLower(player);
+            boolean owner = core.ownerNick().equals(nick) || Claims.isAdmin(player);
+            boolean member = owner || core.trusted().contains(nick);
+
+            if (owner && Claims.heldItemId(player).equals(VoidRpClaims.config().upgradeItemId())) {
+                Claims.upgradeClaim(level, core, player, event.getFace());
+            } else if (member && Claims.heldItemId(player).isEmpty()) {
+                // Empty-hand click by owner/trusted/admin toggles the claim grid.
+                ClaimVisualizer.toggle(player, core);
+            } else if (member) {
+                Claims.msg(player, "§dПриват §f" + core.ownerNick() + "§d · кубов " + core.level()
+                        + "/" + VoidRpClaims.config().maxLevel() + " · доверенных: " + core.trusted().size());
             }
             event.setUseBlock(TriState.FALSE);
             event.setCanceled(true);
             return;
         }
 
-        ClaimData claim = VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getZ());
+        ClaimData claim = VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getY(), pos.getZ());
         if (claim != null && !(claim.canBuild(Claims.nickLower(player)) || Claims.isAdmin(player))) {
             event.setUseBlock(TriState.FALSE);
         }

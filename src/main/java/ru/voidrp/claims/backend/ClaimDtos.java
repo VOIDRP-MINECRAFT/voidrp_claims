@@ -16,9 +16,8 @@ public final class ClaimDtos {
             int coreX,
             int coreY,
             int coreZ,
-            int coreChunkX,
-            int coreChunkZ,
             int level,
+            List<List<Integer>> cubes,
             List<String> trustedNicks
     ) {
     }
@@ -36,7 +35,7 @@ public final class ClaimDtos {
     ) {
     }
 
-    public record ClaimUpgradeRequest(int level) {
+    public record ClaimUpgradeRequest(List<Integer> cube) {
     }
 
     public record ClaimTrustRequest(String nick, String action) {

@@ -49,7 +49,7 @@ public final class ClaimCommands {
 
     private static ClaimData claimAtPlayer(ServerPlayer player) {
         BlockPos pos = player.blockPosition();
-        return VoidRpClaims.store().claimAtBlock(Claims.dimKey(player.level()), pos.getX(), pos.getZ());
+        return VoidRpClaims.store().claimAtBlock(Claims.dimKey(player.level()), pos.getX(), pos.getY(), pos.getZ());
     }
 
     private static boolean isOwner(ClaimData claim, ServerPlayer player) {
@@ -63,9 +63,8 @@ public final class ClaimCommands {
             Claims.msg(p, "§7Здесь нет привата (анархия).");
             return 0;
         }
-        int span = 2 * (c.level() - 1) + 1;
-        Claims.msg(p, "§dПриват §f" + c.ownerNick() + "§d · ур. " + c.level()
-                + " (" + span + "×" + span + " чанков) · доверенные: "
+        Claims.msg(p, "§dПриват §f" + c.ownerNick() + "§d · кубов " + c.level()
+                + "/" + VoidRpClaims.config().maxLevel() + " · доверенные: "
                 + (c.trusted().isEmpty() ? "нет" : String.join(", ", c.trusted())));
         return 1;
     }

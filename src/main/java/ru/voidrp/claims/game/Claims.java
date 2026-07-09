@@ -2,6 +2,7 @@ package ru.voidrp.claims.game;
 
 import java.util.Locale;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -14,6 +15,7 @@ import net.minecraft.world.level.LevelAccessor;
 import ru.voidrp.claims.VoidRpClaims;
 import ru.voidrp.claims.backend.ClaimDtos.ClaimCreateRequest;
 import ru.voidrp.claims.store.ClaimData;
+import ru.voidrp.claims.store.Cube;
 
 /** Server-side helpers: dimension keys, permission/nick checks, and the
  *  backend-backed create / delete / upgrade actions. */
@@ -70,7 +72,7 @@ public final class Claims {
     // ── actions ──────────────────────────────────────────────────────────
     public static void createClaim(ServerLevel level, BlockPos pos, ServerPlayer player) {
         String dim = dimKey(level);
-        if (VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getZ()) != null) {
+        if (VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getY(), pos.getZ()) != null) {
             msg(player, "§cЗдесь уже есть приват — ядро не активировано.");
             return;
         }
@@ -118,7 +120,14 @@ public final class Claims {
                 });
     }
 
-    public static void upgradeClaim(ServerLevel level, ClaimData claim, ServerPlayer player) {
+    /** Cost (in upgrade items) to add the next cube when the claim is at {@code level}.
+     *  Scales up: 1, then +1 every 3 levels. */
+    public static int upgradeCost(int level) {
+        int base = Math.max(1, VoidRpClaims.config().upgradeItemsPerLevel());
+        return base * (1 + Math.max(0, level - 1) / 3);
+    }
+
+    public static void upgradeClaim(ServerLevel level, ClaimData claim, ServerPlayer player, Direction face) {
         int max = VoidRpClaims.config().maxLevel();
         if (claim.level() >= max) {
             msg(player, "§eМаксимальный уровень (" + max + ") уже достигнут.");
@@ -126,24 +135,31 @@ public final class Claims {
         }
 
         String need = VoidRpClaims.config().upgradeItemId();
-        int cost = Math.max(1, VoidRpClaims.config().upgradeItemsPerLevel());
+        int cost = upgradeCost(claim.level());
         ItemStack held = player.getMainHandItem();
         if (!heldItemId(player).equals(need) || held.getCount() < cost) {
             msg(player, Component.literal("§cДля улучшения нужно " + cost + "× ")
                     .append(upgradeItemName())
-                    .append(Component.literal(" в руке.")));
+                    .append(Component.literal(" в руке (кликни грань ядра в нужную сторону).")));
             return;
         }
 
-        int newLevel = claim.level() + 1;
+        // Walk from the core cube along the clicked face until the first free cell.
+        Cube cur = claim.coreCube();
+        Cube step = new Cube(face.getStepX(), face.getStepY(), face.getStepZ());
+        while (claim.cubes().contains(cur)) {
+            cur = new Cube(cur.x() + step.x(), cur.y() + step.y(), cur.z() + step.z());
+        }
+        final Cube target = cur;
+
         var server = level.getServer();
-        VoidRpClaims.backend().upgradeAsync(claim.id(), newLevel)
+        VoidRpClaims.backend().addCubeAsync(claim.id(), target.x(), target.y(), target.z())
                 .thenAccept(resp -> server.execute(() -> {
                     if (resp != null && resp.ok() && resp.claim() != null) {
                         held.shrink(cost);
                         VoidRpClaims.store().put(ClaimData.fromDto(resp.claim()));
-                        int span = 2 * (newLevel - 1) + 1;
-                        msg(player, "§aПриват улучшен до уровня " + newLevel + " (" + span + "×" + span + " чанков).");
+                        msg(player, "§aПриват расширен: +1 куб 16×16×16 (" + resp.claim().level()
+                                + "/" + max + "). Следующее улучшение — " + upgradeCost(resp.claim().level()) + "×.");
                     } else {
                         msg(player, "§cУлучшение отклонено: " + (resp != null ? resp.error() : "нет ответа") + ".");
                     }

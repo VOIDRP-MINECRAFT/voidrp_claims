@@ -5,27 +5,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * In-memory claim index. Server-thread confined (all mutations scheduled onto
- * the main thread), so plain maps are fine. Provides O(1) chunk → claim lookup
- * for the protection handlers.
+ * In-memory claim index. Server-thread confined. Provides O(1) cube → claim
+ * lookup (16x16x16 cells) for the protection handlers.
  */
 public final class ClaimStore {
 
     private final Map<String, ClaimData> byId = new HashMap<>();
-    // dimension -> (packed chunk key -> claim)
-    private final Map<String, Map<Long, ClaimData>> byChunk = new HashMap<>();
-
-    public static long chunkKey(int chunkX, int chunkZ) {
-        return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);
-    }
-
-    public static int chunkOf(int blockCoord) {
-        return Math.floorDiv(blockCoord, 16);
-    }
+    // dimension -> (cube -> claim)
+    private final Map<String, Map<Cube, ClaimData>> byCube = new HashMap<>();
 
     public void loadAll(Collection<ClaimData> claims) {
         byId.clear();
-        byChunk.clear();
+        byCube.clear();
         for (ClaimData c : claims) {
             put(c);
         }
@@ -54,20 +45,15 @@ public final class ClaimStore {
         return byId.values();
     }
 
-    /** The claim owning the given chunk in the given dimension, or null. */
-    public ClaimData claimAtChunk(String dimension, int chunkX, int chunkZ) {
-        Map<Long, ClaimData> dim = byChunk.get(dimension);
-        return dim == null ? null : dim.get(chunkKey(chunkX, chunkZ));
-    }
-
-    /** The claim owning the given block position, or null. */
-    public ClaimData claimAtBlock(String dimension, int x, int z) {
-        return claimAtChunk(dimension, chunkOf(x), chunkOf(z));
+    /** The claim owning the cube containing the given block, or null. */
+    public ClaimData claimAtBlock(String dimension, int x, int y, int z) {
+        Map<Cube, ClaimData> dim = byCube.get(dimension);
+        return dim == null ? null : dim.get(Cube.ofBlock(x, y, z));
     }
 
     /** Claim whose core block sits exactly at this position, or null. */
     public ClaimData coreAt(String dimension, int x, int y, int z) {
-        ClaimData c = claimAtBlock(dimension, x, z);
+        ClaimData c = claimAtBlock(dimension, x, y, z);
         if (c != null && c.coreX() == x && c.coreY() == y && c.coreZ() == z) {
             return c;
         }
@@ -75,27 +61,20 @@ public final class ClaimStore {
     }
 
     private void index(ClaimData c) {
-        Map<Long, ClaimData> dim = byChunk.computeIfAbsent(c.dimension(), k -> new HashMap<>());
-        int r = c.chunkRadius();
-        for (int cx = c.coreChunkX() - r; cx <= c.coreChunkX() + r; cx++) {
-            for (int cz = c.coreChunkZ() - r; cz <= c.coreChunkZ() + r; cz++) {
-                dim.put(chunkKey(cx, cz), c);
-            }
+        Map<Cube, ClaimData> dim = byCube.computeIfAbsent(c.dimension(), k -> new HashMap<>());
+        for (Cube cube : c.cubes()) {
+            dim.put(cube, c);
         }
     }
 
     private void unindex(ClaimData c) {
-        Map<Long, ClaimData> dim = byChunk.get(c.dimension());
+        Map<Cube, ClaimData> dim = byCube.get(c.dimension());
         if (dim == null) {
             return;
         }
-        int r = c.chunkRadius();
-        for (int cx = c.coreChunkX() - r; cx <= c.coreChunkX() + r; cx++) {
-            for (int cz = c.coreChunkZ() - r; cz <= c.coreChunkZ() + r; cz++) {
-                long key = chunkKey(cx, cz);
-                if (dim.get(key) == c) {
-                    dim.remove(key);
-                }
+        for (Cube cube : c.cubes()) {
+            if (dim.get(cube) == c) {
+                dim.remove(cube);
             }
         }
     }
