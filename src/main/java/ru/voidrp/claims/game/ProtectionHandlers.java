@@ -8,7 +8,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.minecraft.util.TriState;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import ru.voidrp.claims.VoidRpClaims;
 import ru.voidrp.claims.reg.ModContent;
@@ -38,15 +37,18 @@ public final class ProtectionHandlers {
 
         boolean privileged = claim.canBuild(Claims.nickLower(player)) || Claims.isAdmin(player);
 
-        // Breaking the core itself: owner/admin removes the claim, others are denied.
+        // The core is the raid target: ANYONE may mine it out (it just takes a long
+        // time — see the block's hardness). Breaking it removes the claim.
         ClaimData core = VoidRpClaims.store().coreAt(dim, pos.getX(), pos.getY(), pos.getZ());
         if (core != null) {
             if (core.ownerNick().equals(Claims.nickLower(player)) || Claims.isAdmin(player)) {
                 Claims.deleteClaim(level, core, player);
-                return; // allow the break
+            } else {
+                Claims.deleteClaimQuiet(level, core);
+                Claims.msg(player, "§aЯдро привата игрока §f" + core.ownerNick()
+                        + "§a разрушено — приват пал!");
             }
-            event.setCanceled(true);
-            return;
+            return; // allow the break in both cases
         }
 
         if (!privileged) {
@@ -110,24 +112,7 @@ public final class ProtectionHandlers {
         }
     }
 
-    /**
-     * Raid path: explosions BREACH claims — claimed blocks are not protected from
-     * TNT / end crystals. If the blast destroys a claim core, that claim falls.
-     */
-    @SubscribeEvent
-    public static void onExplosion(ExplosionEvent.Detonate event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) {
-            return;
-        }
-        String dim = Claims.dimKey(level);
-        for (BlockPos pos : event.getAffectedBlocks()) {
-            ClaimData core = VoidRpClaims.store().coreAt(dim, pos.getX(), pos.getY(), pos.getZ());
-            if (core != null) {
-                VoidRpClaims.LOGGER.info("Claim core destroyed by explosion — claim removed: id={} owner={}",
-                        core.id(), core.ownerNick());
-                Claims.deleteClaimQuiet(level, core);
-            }
-        }
-        // Claimed blocks are intentionally left in the affected list so they break.
-    }
+    // NOTE: no explosion handler. Explosions breach claims by default (claimed
+    // blocks are left to break), which is the raid entry path. The core itself is
+    // explosion-proof (obsidian-tier blast resistance) and can only be mined out.
 }

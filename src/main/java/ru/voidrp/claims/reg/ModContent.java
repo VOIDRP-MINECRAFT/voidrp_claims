@@ -20,9 +20,11 @@ public final class ModContent {
             "claim_core",
             props -> props
                     .mapColor(MapColor.COLOR_PURPLE)
-                    // High hardness (slow to mine), but modest blast resistance so the
-                    // core can be destroyed by explosions — the anarchy raid path.
-                    .strength(50.0F, 12.0F)
+                    // Explosion-proof (resistance 1200 — obsidian tier): the core can't
+                    // be blown up. Very high hardness: the raid path is to MINE it out,
+                    // which takes a long time (~37s with a diamond pickaxe). The
+                    // needs_diamond_tool tag makes lower tiers impractical.
+                    .strength(200.0F, 1200.0F)
                     .requiresCorrectToolForDrops()
                     .lightLevel(state -> 15)
     );
