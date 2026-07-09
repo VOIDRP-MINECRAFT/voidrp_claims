@@ -4,9 +4,11 @@ import java.util.Locale;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.LevelAccessor;
 import ru.voidrp.claims.VoidRpClaims;
@@ -46,6 +48,17 @@ public final class Claims {
         player.sendSystemMessage(Component.literal(text));
     }
 
+    public static void msg(Player player, Component component) {
+        player.sendSystemMessage(component);
+    }
+
+    /** Localized display name of the configured upgrade item (client resolves it). */
+    public static Component upgradeItemName() {
+        Item item = BuiltInRegistries.ITEM.getValue(
+                Identifier.parse(VoidRpClaims.config().upgradeItemId()));
+        return Component.translatable(item.getDescriptionId());
+    }
+
     public static String heldItemId(Player player) {
         ItemStack stack = player.getMainHandItem();
         if (stack.isEmpty()) {
@@ -67,8 +80,9 @@ public final class Claims {
                 .thenAccept(resp -> server.execute(() -> {
                     if (resp != null && resp.ok() && resp.claim() != null) {
                         VoidRpClaims.store().put(ClaimData.fromDto(resp.claim()));
-                        msg(player, "§aПриват создан! Уровень 1 (1 чанк). Кликни по ядру блоком «"
-                                + VoidRpClaims.config().upgradeItemId() + "», чтобы расширить.");
+                        msg(player, Component.literal("§aПриват создан! Уровень 1 (1 чанк). Кликни по ядру предметом «")
+                                .append(upgradeItemName())
+                                .append(Component.literal("», чтобы расширить.")));
                     } else {
                         msg(player, "§cНе удалось создать приват: " + (resp != null ? resp.error() : "нет ответа") + ".");
                     }
@@ -104,7 +118,9 @@ public final class Claims {
         int cost = Math.max(1, VoidRpClaims.config().upgradeItemsPerLevel());
         ItemStack held = player.getMainHandItem();
         if (!heldItemId(player).equals(need) || held.getCount() < cost) {
-            msg(player, "§cДля улучшения нужно " + cost + "×" + need + " в руке.");
+            msg(player, Component.literal("§cДля улучшения нужно " + cost + "× ")
+                    .append(upgradeItemName())
+                    .append(Component.literal(" в руке.")));
             return;
         }
 
