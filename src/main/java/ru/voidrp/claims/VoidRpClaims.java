@@ -9,6 +9,7 @@ import ru.voidrp.claims.backend.ClaimsBackendClient;
 import ru.voidrp.claims.command.ClaimCommands;
 import ru.voidrp.claims.config.ClaimsConfig;
 import ru.voidrp.claims.game.ClaimSyncHooks;
+import ru.voidrp.claims.game.ParticleHooks;
 import ru.voidrp.claims.game.ProtectionHandlers;
 import ru.voidrp.claims.reg.ModContent;
 import ru.voidrp.claims.store.ClaimStore;
@@ -31,6 +32,7 @@ public final class VoidRpClaims {
         NeoForge.EVENT_BUS.register(ProtectionHandlers.class);
         NeoForge.EVENT_BUS.register(ClaimSyncHooks.class);
         NeoForge.EVENT_BUS.register(ClaimCommands.class);
+        NeoForge.EVENT_BUS.register(ParticleHooks.class);
 
         LOGGER.info("VoidRP Claims loaded — backend={}, maxLevel={}", config.backendBaseUrl(), config.maxLevel());
     }

@@ -1,1 +1,8 @@
-{ "parent": "minecraft:block/cube_all", "textures": { "all": "voidrp_claims:block/claim_core" } }
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "voidrp_claims:block/claim_core_top",
+    "bottom": "voidrp_claims:block/claim_core_bottom",
+    "side": "voidrp_claims:block/claim_core_side"
+  }
+}

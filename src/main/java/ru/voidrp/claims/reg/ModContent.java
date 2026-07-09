@@ -22,7 +22,7 @@ public final class ModContent {
                     .mapColor(MapColor.COLOR_PURPLE)
                     .strength(50.0F, 1200.0F)
                     .requiresCorrectToolForDrops()
-                    .lightLevel(state -> 9)
+                    .lightLevel(state -> 15)
     );
 
     public static final DeferredItem<BlockItem> CLAIM_CORE_ITEM =
