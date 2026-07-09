@@ -110,10 +110,24 @@ public final class ProtectionHandlers {
         }
     }
 
+    /**
+     * Raid path: explosions BREACH claims — claimed blocks are not protected from
+     * TNT / end crystals. If the blast destroys a claim core, that claim falls.
+     */
     @SubscribeEvent
     public static void onExplosion(ExplosionEvent.Detonate event) {
-        String dim = Claims.dimKey(event.getLevel());
-        event.getAffectedBlocks().removeIf(pos ->
-                VoidRpClaims.store().claimAtBlock(dim, pos.getX(), pos.getZ()) != null);
+        if (!(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        String dim = Claims.dimKey(level);
+        for (BlockPos pos : event.getAffectedBlocks()) {
+            ClaimData core = VoidRpClaims.store().coreAt(dim, pos.getX(), pos.getY(), pos.getZ());
+            if (core != null) {
+                VoidRpClaims.LOGGER.info("Claim core destroyed by explosion — claim removed: id={} owner={}",
+                        core.id(), core.ownerNick());
+                Claims.deleteClaimQuiet(level, core);
+            }
+        }
+        // Claimed blocks are intentionally left in the affected list so they break.
     }
 }

@@ -93,6 +93,17 @@ public final class Claims {
                 });
     }
 
+    /** Removes a claim without a player message — used when the core is blown up (raid). */
+    public static void deleteClaimQuiet(ServerLevel level, ClaimData claim) {
+        var server = level.getServer();
+        VoidRpClaims.backend().deleteAsync(claim.id())
+                .thenAccept(resp -> server.execute(() -> VoidRpClaims.store().remove(claim.id())))
+                .exceptionally(ex -> {
+                    server.execute(() -> VoidRpClaims.store().remove(claim.id()));
+                    return null;
+                });
+    }
+
     public static void deleteClaim(ServerLevel level, ClaimData claim, ServerPlayer player) {
         var server = level.getServer();
         VoidRpClaims.backend().deleteAsync(claim.id())

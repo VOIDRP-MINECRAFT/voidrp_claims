@@ -20,7 +20,9 @@ public final class ModContent {
             "claim_core",
             props -> props
                     .mapColor(MapColor.COLOR_PURPLE)
-                    .strength(50.0F, 1200.0F)
+                    // High hardness (slow to mine), but modest blast resistance so the
+                    // core can be destroyed by explosions — the anarchy raid path.
+                    .strength(50.0F, 12.0F)
                     .requiresCorrectToolForDrops()
                     .lightLevel(state -> 15)
     );
