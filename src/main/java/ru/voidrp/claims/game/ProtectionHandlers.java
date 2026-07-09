@@ -94,6 +94,13 @@ public final class ProtectionHandlers {
 
         ClaimData core = VoidRpClaims.store().coreAt(dim, pos.getX(), pos.getY(), pos.getZ());
         if (core != null) {
+            // RightClickBlock fires for both hands — only act on the main hand,
+            // otherwise the off-hand click immediately toggles the grid back.
+            if (event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) {
+                event.setUseBlock(TriState.FALSE);
+                event.setCanceled(true);
+                return;
+            }
             String nick = Claims.nickLower(player);
             boolean owner = core.ownerNick().equals(nick) || Claims.isAdmin(player);
             boolean member = owner || core.trusted().contains(nick);

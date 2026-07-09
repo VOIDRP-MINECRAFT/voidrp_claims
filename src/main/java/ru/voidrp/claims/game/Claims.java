@@ -1,10 +1,13 @@
 package ru.voidrp.claims.game;
 
 import java.util.Locale;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -47,11 +50,41 @@ public final class Claims {
     }
 
     public static void msg(Player player, String text) {
-        player.sendSystemMessage(Component.literal(text));
+        player.sendSystemMessage(legacy(text));
     }
 
     public static void msg(Player player, Component component) {
         player.sendSystemMessage(component);
+    }
+
+    /** Parses legacy §-color/format codes into a styled Component (26.2 does not
+     *  interpret § inside a plain literal). */
+    public static MutableComponent legacy(String s) {
+        MutableComponent out = Component.empty();
+        Style style = Style.EMPTY;
+        StringBuilder buf = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '§' && i + 1 < s.length()) {
+                if (buf.length() > 0) {
+                    out.append(Component.literal(buf.toString()).setStyle(style));
+                    buf.setLength(0);
+                }
+                ChatFormatting fmt = ChatFormatting.getByCode(Character.toLowerCase(s.charAt(++i)));
+                if (fmt == ChatFormatting.RESET) {
+                    style = Style.EMPTY;
+                } else if (fmt != null) {
+                    // applyFormat handles both colours and formatting codes.
+                    style = style.applyFormat(fmt);
+                }
+            } else {
+                buf.append(c);
+            }
+        }
+        if (buf.length() > 0) {
+            out.append(Component.literal(buf.toString()).setStyle(style));
+        }
+        return out;
     }
 
     /** Localized display name of the configured upgrade item (client resolves it). */
@@ -82,9 +115,9 @@ public final class Claims {
                 .thenAccept(resp -> server.execute(() -> {
                     if (resp != null && resp.ok() && resp.claim() != null) {
                         VoidRpClaims.store().put(ClaimData.fromDto(resp.claim()));
-                        msg(player, Component.literal("§aПриват создан! Уровень 1 (1 чанк). Кликни по ядру предметом «")
+                        msg(player, legacy("§aПриват создан! Уровень 1 — куб 16×16×16. Кликни грань ядра предметом «")
                                 .append(upgradeItemName())
-                                .append(Component.literal("», чтобы расширить.")));
+                                .append(legacy("», чтобы прирастить куб в ту сторону.")));
                     } else {
                         msg(player, "§cНе удалось создать приват: " + (resp != null ? resp.error() : "нет ответа") + ".");
                     }
@@ -138,9 +171,9 @@ public final class Claims {
         int cost = upgradeCost(claim.level());
         ItemStack held = player.getMainHandItem();
         if (!heldItemId(player).equals(need) || held.getCount() < cost) {
-            msg(player, Component.literal("§cДля улучшения нужно " + cost + "× ")
+            msg(player, legacy("§cДля улучшения нужно " + cost + "× ")
                     .append(upgradeItemName())
-                    .append(Component.literal(" в руке (кликни грань ядра в нужную сторону).")));
+                    .append(legacy(" в руке (кликни грань ядра в нужную сторону).")));
             return;
         }
 
