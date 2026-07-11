@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,6 +25,10 @@ public final class ClaimVisualizer {
     // player uuid -> claim id currently being shown
     private static final Map<UUID, String> ACTIVE = new ConcurrentHashMap<>();
     private static int tick;
+
+    // Purple accent for the alternating white/purple wireframe (packed 0xRRGGBB).
+    private static final DustParticleOptions PURPLE =
+            new DustParticleOptions(0x9919E6, 1.0F);
 
     private ClaimVisualizer() {
     }
@@ -57,26 +62,33 @@ public final class ClaimVisualizer {
                 continue;
             }
             for (Cube cube : claim.cubes()) {
-                drawCube(level, player, cube);
+                drawCube(level, player, claim, cube);
             }
         }
     }
 
-    private static void drawCube(ServerLevel level, ServerPlayer player, Cube cube) {
-        double minX = cube.x() * 16.0, minY = cube.y() * 16.0, minZ = cube.z() * 16.0;
-        double maxX = minX + 16, maxY = minY + 16, maxZ = minZ + 16;
+    private static void drawCube(ServerLevel level, ServerPlayer player, ClaimData claim, Cube cube) {
+        // Cubes are core-relative: (0,0,0) is centred on the core.
+        double minX = claim.cubeMinX(cube), minY = claim.cubeMinY(cube), minZ = claim.cubeMinZ(cube);
+        double maxX = minX + ClaimData.SIZE, maxY = minY + ClaimData.SIZE, maxZ = minZ + ClaimData.SIZE;
         double[] xs = {minX, maxX}, ys = {minY, maxY}, zs = {minZ, maxZ};
         double step = 4.0;
 
+        // A running index across all points gives the alternating white/purple pattern.
+        int[] i = {0};
         // edges along X
-        for (double y : ys) for (double z : zs) for (double x = minX; x <= maxX; x += step) point(level, player, x, y, z);
+        for (double y : ys) for (double z : zs) for (double x = minX; x <= maxX; x += step) point(level, player, x, y, z, i);
         // edges along Y
-        for (double x : xs) for (double z : zs) for (double y = minY; y <= maxY; y += step) point(level, player, x, y, z);
+        for (double x : xs) for (double z : zs) for (double y = minY; y <= maxY; y += step) point(level, player, x, y, z, i);
         // edges along Z
-        for (double x : xs) for (double y : ys) for (double z = minZ; z <= maxZ; z += step) point(level, player, x, y, z);
+        for (double x : xs) for (double y : ys) for (double z = minZ; z <= maxZ; z += step) point(level, player, x, y, z, i);
     }
 
-    private static void point(ServerLevel level, ServerPlayer player, double x, double y, double z) {
-        level.sendParticles(player, ParticleTypes.END_ROD, true, true, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+    private static void point(ServerLevel level, ServerPlayer player, double x, double y, double z, int[] i) {
+        if ((i[0]++ & 1) == 0) {
+            level.sendParticles(player, ParticleTypes.END_ROD, true, true, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+        } else {
+            level.sendParticles(player, PURPLE, true, true, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+        }
     }
 }

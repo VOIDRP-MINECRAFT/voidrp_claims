@@ -49,6 +49,11 @@ public final class ClaimsBackendClient {
                 ClaimActionResponse.class);
     }
 
+    public CompletableFuture<ClaimActionResponse> fillAsync(String claimId) {
+        return sendAsync(jsonPost("/api/v1/claims/" + claimId + "/fill", new java.util.HashMap<>()),
+                ClaimActionResponse.class);
+    }
+
     public CompletableFuture<ClaimActionResponse> deleteAsync(String claimId) {
         return sendAsync(request("/api/v1/claims/" + claimId).DELETE().build(), ClaimActionResponse.class);
     }

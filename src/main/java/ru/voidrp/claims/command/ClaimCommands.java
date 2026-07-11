@@ -27,6 +27,7 @@ public final class ClaimCommands {
         event.getDispatcher().register(
                 Commands.literal("claim")
                         .then(Commands.literal("info").executes(ClaimCommands::info))
+                        .then(Commands.literal("fill").executes(ClaimCommands::fill))
                         .then(Commands.literal("remove").executes(ClaimCommands::remove))
                         .then(Commands.literal("trust").then(
                                 Commands.argument("player", StringArgumentType.word())
@@ -66,6 +67,21 @@ public final class ClaimCommands {
         Claims.msg(p, "§dПриват §f" + c.ownerNick() + "§d · кубов " + c.level()
                 + "/" + VoidRpClaims.config().maxLevel() + " · доверенные: "
                 + (c.trusted().isEmpty() ? "нет" : String.join(", ", c.trusted())));
+        return 1;
+    }
+
+    private static int fill(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer p = ctx.getSource().getPlayerOrException();
+        ClaimData c = claimAtPlayer(p);
+        if (c == null) {
+            Claims.msg(p, "§cВстань в свой приват, чтобы заполнить его пробелы.");
+            return 0;
+        }
+        if (!isOwner(c, p)) {
+            Claims.msg(p, "§cТы не владелец этого привата.");
+            return 0;
+        }
+        Claims.fillClaim((ServerLevel) p.level(), c, p);
         return 1;
     }
 

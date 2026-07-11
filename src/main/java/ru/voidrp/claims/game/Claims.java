@@ -160,6 +160,48 @@ public final class Claims {
         return base * (1 + Math.max(0, level - 1) / 3);
     }
 
+    /** Fills the diagonal gaps in a claim: turns its L/plus shape into a solid box.
+     *  Charges the base upgrade cost per cell actually added. */
+    public static void fillClaim(ServerLevel level, ClaimData claim, ServerPlayer player) {
+        int missing = claim.fillMissingCount();
+        int room = VoidRpClaims.config().maxLevel() - claim.level();
+        int willAdd = Math.min(missing, Math.max(0, room));
+        if (willAdd <= 0) {
+            msg(player, "§eЗаполнять нечего — приват уже сплошной (или достигнут лимит кубов).");
+            return;
+        }
+
+        String need = VoidRpClaims.config().upgradeItemId();
+        int base = Math.max(1, VoidRpClaims.config().upgradeItemsPerLevel());
+        int cost = base * willAdd; // upper bound; actual charge follows the backend result
+        ItemStack held = player.getMainHandItem();
+        if (!heldItemId(player).equals(need) || held.getCount() < cost) {
+            msg(player, legacy("§cДля заполнения нужно до " + cost + "× ")
+                    .append(upgradeItemName())
+                    .append(legacy(" в руке (по " + base + " за куб, всего до " + willAdd + " кубов).")));
+            return;
+        }
+
+        int before = claim.level();
+        var server = level.getServer();
+        VoidRpClaims.backend().fillAsync(claim.id())
+                .thenAccept(resp -> server.execute(() -> {
+                    if (resp != null && resp.ok() && resp.claim() != null) {
+                        int added = resp.claim().level() - before;
+                        held.shrink(base * Math.max(0, added));
+                        VoidRpClaims.store().put(ClaimData.fromDto(resp.claim()));
+                        msg(player, "§aПробелы заполнены: +" + added + " кубов (итого "
+                                + resp.claim().level() + "/" + VoidRpClaims.config().maxLevel() + ").");
+                    } else {
+                        msg(player, "§cЗаполнение отклонено: " + (resp != null ? resp.error() : "нет ответа") + ".");
+                    }
+                }))
+                .exceptionally(ex -> {
+                    server.execute(() -> msg(player, "§cСервис приватов недоступен, попробуй позже."));
+                    return null;
+                });
+    }
+
     public static void upgradeClaim(ServerLevel level, ClaimData claim, ServerPlayer player, Direction face) {
         int max = VoidRpClaims.config().maxLevel();
         if (claim.level() >= max) {
@@ -177,8 +219,8 @@ public final class Claims {
             return;
         }
 
-        // Walk from the core cube along the clicked face until the first free cell.
-        Cube cur = claim.coreCube();
+        // Walk from the core cube (relative 0,0,0) along the clicked face until the first free cell.
+        Cube cur = new Cube(0, 0, 0);
         Cube step = new Cube(face.getStepX(), face.getStepY(), face.getStepZ());
         while (claim.cubes().contains(cur)) {
             cur = new Cube(cur.x() + step.x(), cur.y() + step.y(), cur.z() + step.z());
