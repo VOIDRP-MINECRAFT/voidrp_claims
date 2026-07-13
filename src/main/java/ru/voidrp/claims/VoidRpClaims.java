@@ -12,6 +12,7 @@ import ru.voidrp.claims.game.ClaimSyncHooks;
 import ru.voidrp.claims.game.ClaimVisualizer;
 import ru.voidrp.claims.game.ParticleHooks;
 import ru.voidrp.claims.game.ProtectionHandlers;
+import ru.voidrp.claims.game.RaidAlerts;
 import ru.voidrp.claims.reg.ModContent;
 import ru.voidrp.claims.store.ClaimStore;
 
@@ -31,6 +32,7 @@ public final class VoidRpClaims {
 
         ModContent.register(modBus);
         NeoForge.EVENT_BUS.register(ProtectionHandlers.class);
+        NeoForge.EVENT_BUS.register(RaidAlerts.class);
         NeoForge.EVENT_BUS.register(ClaimSyncHooks.class);
         NeoForge.EVENT_BUS.register(ClaimCommands.class);
         NeoForge.EVENT_BUS.register(ParticleHooks.class);
